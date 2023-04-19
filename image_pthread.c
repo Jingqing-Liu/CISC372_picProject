@@ -4,6 +4,9 @@
 #include <string.h>
 #include "image.h"
 
+#include <pthread.h>
+#include <unistd.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -78,16 +81,26 @@ void* convolute_threads(void* args) {
 //            destImage: A pointer to a  pre-allocated (including space for the pixel array) structure to receive the convoluted image.  It should be the same size as srcImage
 //            algorithm: The kernel matrix to use for the convolution
 //Returns: Nothing
-void convolute(Image* srcImage,Image* destImage,Matrix algorithm){
-    int row,pix,bit,span;
-    span=srcImage->bpp*srcImage->bpp;
-    for (row=0;row<srcImage->height;row++){
-        for (pix=0;pix<srcImage->width;pix++){
-            for (bit=0;bit<srcImage->bpp;bit++){
-                destImage->data[Index(pix,row,srcImage->width,bit,srcImage->bpp)]=getPixelValue(srcImage,pix,row,bit,algorithm);
+void convolute(Image* srcImage, Image* destImage, Matrix algorithm){
+    struct thread* thread;
+    int numthread = 4;
+    pthread_t threads[numthread];
+    for (int i = 0; i < numthread; i++) {
+        thread = (struct thread *)malloc(sizeof(struct thread));
+        for (int row = 0; row < 3; row++) {
+            for (int colmn = 0; colmn < 3; colmn++) {
+                thread -> algorithm[row][colmn] = algorithm[row][colmn];
             }
         }
+        thread -> id = i;
+        thread -> srcImage = srcImage;
+        thread -> destImage = destImage;
+        pthread_create(&threads[i], NULL, convolute_threads, thread);
     }
+    for (int i = 0; i < 4; i++){
+        pthread_join(threads[i], NULL);
+    }
+
 }
 
 //Usage: Prints usage information for the program
