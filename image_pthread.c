@@ -53,9 +53,24 @@ uint8_t getPixelValue(Image* srcImage,int x,int y,int bit,Matrix algorithm){
 
 struct thread {
     int id;
-    Image* scrImage;
+    Image* srcImage;
     Image* destImage;
     Matrix algorithm;
+};
+
+void* convolute_threads(void* args) {
+    struct thread* thread = (struct thread*) args;
+    int row, pix, bit, span, i;
+    span = thread -> srcImage -> bpp* thread -> srcImage -> bpp;
+    for (row = 0; row < thread -> srcImage -> height; row++){
+        i = row % 4;
+        for (pix = 0; pix < thread -> srcImage -> width; pix++){
+            for (bit = 0; bit < thread -> srcImage -> bpp; bit++){
+                thread -> destImage -> data[Index(pix, row, thread -> srcImage -> width, bit, thread -> srcImage -> bpp)] = getPixelValue(thread -> srcImage, pix, row, bit, thread -> algorithm);
+            }
+        }
+    }
+    return NULL;
 }
 
 //convolute:  Applies a kernel matrix to an image
